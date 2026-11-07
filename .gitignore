@@ -1,0 +1,20 @@
+# Секреты и локальная конфигурация
+.env
+*.json
+
+# Виртуальное окружение и кэш Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# IDE / ОС
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
