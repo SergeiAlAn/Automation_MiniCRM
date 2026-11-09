@@ -4,7 +4,7 @@
 Подключение — сервисный аккаунт (JSON-ключ).
 Можно импортировать класс GoogleSheet в любое приложение:
 
-    from google_sheets import GoogleSheet
+    from integrations.google_sheets import GoogleSheet
 
     sheet = GoogleSheet(
         spreadsheet_id="...",
@@ -25,10 +25,10 @@ from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-load_dotenv(Path(__file__).resolve().parent / ".env")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+load_dotenv(PROJECT_ROOT / ".env")
 
 SCOPES = ("https://www.googleapis.com/auth/spreadsheets",)
-PROJECT_ROOT = Path(__file__).resolve().parent
 
 
 class GoogleSheet:
@@ -38,10 +38,9 @@ class GoogleSheet:
         self,
         spreadsheet_id: str,
         credentials_path: str | Path,
-        sheet_name: str = "Sheet1",
+        sheet_name: str | None = "Sheet1",
     ) -> None:
         self.spreadsheet_id = spreadsheet_id
-        self.sheet_name = sheet_name
         self.credentials_path = Path(credentials_path)
 
         if not self.credentials_path.is_file():
@@ -55,6 +54,61 @@ class GoogleSheet:
         )
         self._service = build("sheets", "v4", credentials=credentials)
         self._values = self._service.spreadsheets().values()
+        # None — взять название первого листа (у RU-аккаунтов часто «Лист1», не Sheet1)
+        self.sheet_name = sheet_name or self.first_sheet_name()
+
+    def _sheet_properties(self) -> dict[str, Any]:
+        meta = (
+            self._service.spreadsheets()
+            .get(
+                spreadsheetId=self.spreadsheet_id,
+                fields="sheets.properties(sheetId,title)",
+            )
+            .execute()
+        )
+        sheets = meta.get("sheets") or []
+        if not sheets:
+            raise RuntimeError("В таблице нет листов")
+        for sheet in sheets:
+            props = sheet["properties"]
+            if props.get("title") == self.sheet_name:
+                return props
+        return sheets[0]["properties"]
+
+    def first_sheet_name(self) -> str:
+        """Возвращает название первого листа таблицы."""
+        meta = (
+            self._service.spreadsheets()
+            .get(
+                spreadsheetId=self.spreadsheet_id,
+                fields="sheets.properties.title",
+            )
+            .execute()
+        )
+        sheets = meta.get("sheets") or []
+        if not sheets:
+            raise RuntimeError("В таблице нет листов")
+        return sheets[0]["properties"]["title"]
+
+    def sheet_id(self) -> int:
+        """Числовой ID текущего листа (нужен для форматирования)."""
+        return int(self._sheet_properties()["sheetId"])
+
+    def batch_format(self, requests: list[dict[str, Any]]) -> dict[str, Any]:
+        """Применяет batchUpdate-запросы оформления к таблице."""
+        if not requests:
+            return {}
+        try:
+            return (
+                self._service.spreadsheets()
+                .batchUpdate(
+                    spreadsheetId=self.spreadsheet_id,
+                    body={"requests": requests},
+                )
+                .execute()
+            )
+        except HttpError as error:
+            raise RuntimeError(f"Ошибка batch_format: {error}") from error
 
     def _a1(self, range_name: str | None = None) -> str:
         """Собирает A1-диапазон с именем листа."""

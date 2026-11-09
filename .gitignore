@@ -2,6 +2,13 @@
 .env
 *.json
 
+# Локальная БД CRM и GUI-настройки Google (пути/ID папки)
+*.db
+*.db-journal
+data/google_gui_settings.txt
+data/*
+!data/.gitkeep
+
 # Виртуальное окружение и кэш Python
 venv/
 .venv/

@@ -1,0 +1,13 @@
+venv/
+.venv/
+.git/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.db-journal
+credentials/
+integrations/
+ui/
+*.md
+.cursor/
+agent-transcripts/

@@ -17,9 +17,9 @@ from typing import Any
 
 from dotenv import load_dotenv
 
-from google_sheets import GoogleSheet
+from integrations.google_sheets import GoogleSheet
 
-PROJECT_ROOT = Path(__file__).resolve().parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(PROJECT_ROOT / ".env")
 
 SPREADSHEET_ID = os.getenv("REPORT_SPREADSHEET_ID", "").strip()
